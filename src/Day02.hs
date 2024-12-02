@@ -1,6 +1,7 @@
 module Day02 where
 
 import Common
+import Data.List (inits, tails)
 
 day02TestInput :: String
 day02TestInput =
@@ -23,7 +24,6 @@ part1 xs = check ((<= 3) . abs) && (check (> 0) || check (< 0))
     check f = all f $ zipWith (-) xs (tail xs)
 
 part2 :: [Int] -> Bool
-part2 xs = part1 xs || p2 [] xs
+part2 xs = any part1 (xs : xs')
   where
-    p2 _ [] = False
-    p2 ys (x : xs) = part1 (ys ++ xs) || p2 (ys ++ [x]) xs
+    xs' = zipWith (++) (inits xs) (drop 1 $ tails xs)
