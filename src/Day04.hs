@@ -41,12 +41,12 @@ day04 input = show <$> [part1 i, part2 i]
     i = parseInput input
 
 part1 :: M.HashMap Point2d Char -> Int
-part1 m = sum $ map checks xs
+part1 m = sum $ map isXmas xs
   where
     xs = M.keys $ M.filter (== 'X') m
     -- perform the checks in the 8 directions
-    checks :: Point2d -> Int
-    checks p =
+    isXmas :: Point2d -> Int
+    isXmas p =
       length . catMaybes $ [check i j p | i <- [-1 .. 1], j <- [-1 .. 1], (i, j) /= (0, 0)]
     -- perform the check by looking at the next 3 points. If the values aren't M, A, S in sequence
     -- then we will get Nothing returned. Otherwise, return Just ()
