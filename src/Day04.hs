@@ -36,9 +36,7 @@ day04TestInputPart2 =
   \"
 
 day04 :: AOCSolution
-day04 input = show <$> [part1 i, part2 i]
-  where
-    i = parseInput input
+day04 input = show <$> ([part1, part2] <*> parseInput input)
 
 part1 :: M.HashMap Point2d Char -> Int
 part1 m = sum $ map isXmas xs
@@ -77,8 +75,8 @@ part2 m = countTrue isXmas $ M.keys m
           "SAM" -> True
           _ -> False
 
-parseInput :: String -> M.HashMap Point2d Char
-parseInput input = M.fromList do
+parseInput :: (Applicative f) => String -> f (M.HashMap Point2d Char)
+parseInput input = pure $ M.fromList do
   (i, line) <- zip [0 ..] $ lines input
   (j, v) <- zip [0 ..] line
   pure ((i, j), v)
