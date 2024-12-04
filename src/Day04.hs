@@ -2,8 +2,7 @@ module Day04 (day04, day04TestInput) where
 
 import Common
 import Data.HashMap.Strict qualified as M
-import Data.HashSet qualified as S
-import Data.Maybe (catMaybes)
+import Data.Maybe (catMaybes, mapMaybe)
 
 day04TestInput :: [String]
 day04TestInput = [day04TestInputPart1, day04TestInputPart2]
@@ -42,31 +41,29 @@ day04 input = show <$> [part1 i, part2 i]
     i = parseInput input
 
 part1 :: M.HashMap Point2d Char -> Int
-part1 m = S.size $ S.fromList $ concatMap (catMaybes . getStrings) (M.keys m)
+part1 m = sum $ map checks xs
   where
-    getStrings (i, j) = isXmas <$> [gUp, gDown, gLeft, gRight, gUpLeft, gUpRight, gDownLeft, gDownRight]
+    xs = M.keys $ M.filter (== 'X') m
+    -- perform the checks in the 8 directions
+    checks :: Point2d -> Int
+    checks p =
+      length . catMaybes $ [check i j p | i <- [-1 .. 1], j <- [-1 .. 1], (i, j) /= (0, 0)]
+    -- perform the check by looking at the next 3 points. If the values aren't M, A, S in sequence
+    -- then we will get Nothing returned. Otherwise, return Just ()
+    check :: Int -> Int -> Point2d -> Maybe ()
+    check i j p@(x, y) =
+      pointIsChar p1 'M'
+        >> pointIsChar p2 'A'
+        >> pointIsChar p3 'S'
+        >> Just ()
       where
-        xs = [0 .. 3]
-        gUp =
-          [(i - x, j) | x <- xs]
-        gDown =
-          [(i + x, j) | x <- xs]
-        gLeft =
-          [(i, j - x) | x <- xs]
-        gRight =
-          [(i, j + x) | x <- xs]
-        gUpLeft =
-          [(i - x, j - x) | x <- xs]
-        gUpRight =
-          [(i - x, j + x) | x <- xs]
-        gDownLeft =
-          [(i + x, j - x) | x <- xs]
-        gDownRight =
-          [(i + x, j + x) | x <- xs]
-        isXmas xs = case map (\k -> M.lookupDefault '.' k m) xs of
-          "XMAS" -> Just $ S.fromList xs
-          "SAMX" -> Just $ S.fromList xs
-          _ -> Nothing
+        [p1, p2, p3] = [(x + i * n, y + j * n) | n <- [1 .. 3]]
+    -- helper function to check if a point is the correct character
+    -- returns Just () if it is, or Nothing if it isn't (or the point is out of bounds)
+    pointIsChar :: Point2d -> Char -> Maybe ()
+    pointIsChar p v = case (== v) <$> M.lookup p m of
+      Just True -> Just ()
+      _ -> Nothing
 
 part2 :: M.HashMap Point2d Char -> Int
 part2 m = countTrue isXmas $ M.keys m
