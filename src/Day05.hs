@@ -2,11 +2,10 @@ module Day05 (day05, day05TestInput) where
 
 import Common
 import Data.HashMap.Strict qualified as M
-import Data.HashSet qualified as S
-import Data.List (partition)
+import Data.List (partition, sortBy)
 import Data.List.Split (splitOn)
 
-type Rules = M.HashMap Int (S.HashSet Int)
+type Rules = Int -> Int -> Ordering
 
 type Update = [Int]
 
@@ -45,44 +44,30 @@ day05TestInput =
   \"
 
 day05 :: AOCSolution
-day05 input = show . solve <$> [p1, map (sort rules) p2]
+day05 input = show . sum <$> res
   where
     (rules, updates) = parseInput input
-    (p1, p2) = partition (checkUpdate rules) updates
-    solve = sum . map getMiddle
-      where
-        getMiddle xs = xs !! (length xs `div` 2)
+    sortedUpdates = map (sortBy rules) updates
+    -- compare each update with it's sorted self
+    -- if they are equal, thats the input to part 1
+    -- if they aren't, thats the input to part 2
+    res =
+      map2 (getMiddle . snd) . untuplify2 . partition (uncurry (==)) $
+        zip updates sortedUpdates
+    getMiddle xs = xs !! (length xs `div` 2)
 
 parseInput :: String -> (Rules, Updates)
-parseInput input = (createRules rules, updates)
+parseInput input = (rules, updates)
   where
     [a, b] = lines <$> splitOn "\n\n" input
-    rules = map (tuplify2 . map read . splitOn "|") a
+    rules = createRules $ map (tuplify2 . map read . splitOn "|") a
     updates = map commaSeparatedInts b
 
 createRules :: [(Int, Int)] -> Rules
-createRules = foldr fn M.empty
+createRules = compareRules . foldr fn M.empty
   where
-    fn :: (Int, Int) -> M.HashMap Int (S.HashSet Int) -> Rules
-    fn (k, v) = M.insertWith mappend k (S.singleton v)
-
-checkUpdate :: Rules -> Update -> Bool
-checkUpdate rules = f
-  where
-    f [] = True
-    f (x : xs) = all (g x) xs && f xs
-    g :: Int -> Int -> Bool
-    g x y = case S.member x <$> rules M.!? y of
-      Just True -> False
-      _ -> True
-
-sort :: Rules -> Update -> Update
-sort rules update = f update []
-  where
-    f [] ys = reverse ys
-    f (x : xs) ys = g xs
-      where
-        g [] = f xs (x : ys)
-        g (v : vs) = case S.member x <$> rules M.!? v of
-          Just True -> f (reverse (v : ys) ++ (x : filter (/= v) xs)) []
-          _ -> g vs
+    fn (a, b) = M.insert (b, a) False . M.insert (a, b) True
+    compareRules rules a b = case M.lookup (a, b) rules of
+      Just True -> LT
+      Just False -> GT
+      Nothing -> EQ
