@@ -7,8 +7,6 @@ import Data.HashSet qualified as S
 import Data.List (partition)
 import Data.Maybe (fromMaybe, isNothing)
 
-data Direction = North | East | South | West deriving (Show)
-
 day06TestInput :: String
 day06TestInput =
   "....#.....\n\
@@ -36,31 +34,17 @@ part2 (grid, start) = countTrue isNothing checkGrids
     checkGrids = parMap rseq run positionsToCheck
     run k = move S.empty North (M.insert k '#' grid, start)
 
-move :: S.HashSet (Point2d, String) -> Direction -> (M.HashMap Point2d Char, Point2d) -> Maybe [Point2d]
+move :: S.HashSet (Point2d, Direction) -> Direction -> (M.HashMap Point2d Char, Point2d) -> Maybe [Point2d]
 move visited dir (grid, pos)
-  | S.member (pos, show dir) visited = Nothing
+  | S.member (pos, dir) visited = Nothing
   | otherwise = case M.lookup pos' grid of
       Just '#' -> move visited' (turn90 dir) (grid', pos)
       Just _ -> move visited' dir (grid', pos')
       Nothing -> Just $ M.keys $ M.filter (== 'X') grid'
   where
-    pos' = newPos pos dir
+    pos' = moveOneStepInDir pos dir
     grid' = M.insert pos 'X' grid
-    visited' = S.insert (pos, show dir) visited
-
-newPos :: Point2d -> Direction -> Point2d
-newPos (i, j) = \case
-  North -> (i - 1, j)
-  East -> (i, j + 1)
-  South -> (i + 1, j)
-  West -> (i, j - 1)
-
-turn90 :: Direction -> Direction
-turn90 = \case
-  North -> East
-  East -> South
-  South -> West
-  West -> North
+    visited' = S.insert (pos, dir) visited
 
 parseInput :: String -> (M.HashMap Point2d Char, Point2d)
 parseInput input = (M.insert start '^' $ M.fromList vs, start)
