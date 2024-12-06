@@ -27,6 +27,7 @@ common shared-properties
         hashable,
         lens,
         mtl,
+        parallel,
         parsec,
         pointedlist,
         primes,
@@ -95,6 +96,7 @@ executable aoc2024
     build-depends:
         aoc2024
     hs-source-dirs:   app
+    ghc-options: -threaded -rtsopts
 
 test-suite spec
     import:           shared-properties

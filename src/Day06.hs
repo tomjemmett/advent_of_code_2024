@@ -1,6 +1,7 @@
 module Day06 (day06, day06TestInput) where
 
 import Common
+import Control.Parallel.Strategies (parMap, rseq)
 import Data.HashMap.Strict qualified as M
 import Data.HashSet qualified as S
 import Data.List (partition)
@@ -32,7 +33,7 @@ part2 :: (M.HashMap Point2d Char, Point2d) -> Int
 part2 (grid, start) = countTrue isNothing checkGrids
   where
     Just positionsToCheck = move S.empty North (grid, start)
-    checkGrids = map run positionsToCheck
+    checkGrids = parMap rseq run positionsToCheck
     run k = move S.empty North (M.insert k '#' grid, start)
 
 move :: S.HashSet (Point2d, String) -> Direction -> (M.HashMap Point2d Char, Point2d) -> Maybe [Point2d]

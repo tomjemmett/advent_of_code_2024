@@ -53,6 +53,7 @@ module Days
   )
 where
 
+import Control.Concurrent (setNumCapabilities)
 import Control.Monad (when)
 import Day01 (day01, day01TestInput)
 import Day02 (day02, day02TestInput)
