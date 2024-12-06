@@ -48,6 +48,9 @@ turn90 = \case
   South -> West
   West -> North
 
+addTuples :: (Int, Int) -> (Int, Int) -> (Int, Int)
+addTuples (a, b) (c, d) = (a + c, b + d)
+
 countTrue :: (Foldable f) => (a -> Bool) -> f a -> Int
 countTrue p = length . filter p . toList
 
