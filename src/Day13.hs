@@ -1,11 +1,14 @@
 module Day13 (day13, day13TestInput) where
 
 import Common
+import Control.Monad (when)
+import Control.Monad.Writer (Writer (..), execWriter, tell)
 import Data.List.Split (splitOn)
+import Data.Monoid (Sum (..))
 import Text.Parsec qualified as P
 import Text.Parsec.String (Parser)
 
-type Machine = ((Integer, Integer), (Integer, Integer), (Integer, Integer))
+type Machine = ((Int, Int), (Int, Int), (Int, Int))
 
 day13TestInput :: String
 day13TestInput =
@@ -39,30 +42,27 @@ parseMachine = parse do
   p <- parsePrize
   pure (a, b, p)
 
-parseButton :: Parser (Integer, Integer)
+parseButton :: Parser (Int, Int)
 parseButton = P.string "Button " >> P.anyChar >> parseXY
 
-parsePrize :: Parser (Integer, Integer)
+parsePrize :: Parser (Int, Int)
 parsePrize = do
   x <- P.string "Prize: X=" *> number
   y <- P.string ", Y=" *> number
-  pure (toInteger x, toInteger y)
+  pure (x, y)
 
-parseXY :: Parser (Integer, Integer)
+parseXY :: Parser (Int, Int)
 parseXY = do
   x <- P.string ": X" *> number
   y <- P.string ", Y" *> number
-  pure (toInteger x, toInteger y)
+  pure (x, y)
 
-solve :: Integer -> [Machine] -> Integer
-solve i = sum . map fn
+solve :: Int -> [Machine] -> Int
+solve i = getSum . execWriter . traverse fn
   where
-    fn :: Machine -> Integer
-    fn ((x1, y1), (x2, y2), ((+ i) -> xt, (+ i) -> yt)) =
-      if ma == 0 && mb == 0
-        then a * 3 + b
-        else 0
-      where
-        n = x1 * y2 - x2 * y1
-        (a, ma) = (xt * y2 - yt * x2) `divMod` n
-        (b, mb) = (yt * x1 - xt * y1) `divMod` n
+    fn :: Machine -> Writer (Sum Int) ()
+    fn ((x1, y1), (x2, y2), ((+ i) -> xt, (+ i) -> yt)) = do
+      let n = x1 * y2 - x2 * y1
+          (a, ma) = (xt * y2 - yt * x2) `divMod` n
+          (b, mb) = (yt * x1 - xt * y1) `divMod` n
+      when (ma == 0 && mb == 0) $ tell (Sum (a * 3 + b))
