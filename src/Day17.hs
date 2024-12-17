@@ -1,24 +1,29 @@
 {-# LANGUAGE TemplateHaskell #-}
 
--- module Day17 (day17, day17TestInput) where
-module Day17 where
+module Day17 (day17, day17TestInput) where
 
 import Common
-import Control.Lens
-import Data.Bits
+import Control.Lens (makeLenses, set, (^.))
+import Data.Bits (Bits (xor))
 import Data.List (intercalate)
+import Data.Maybe (maybe)
 import Data.Vector qualified as V
 import Text.Parsec qualified as P
 import Text.Parsec.String (Parser)
 
 type Instructions = V.Vector Int
 
-type MachineState = (Registers, Int, [Int])
-
 data Registers = Registers
   { _regA :: Int,
     _regB :: Int,
     _regC :: Int
+  }
+  deriving (Show)
+
+data Computer = Computer
+  { _registers :: Registers,
+    _pointer :: Int,
+    _output :: [Int]
   }
   deriving (Show)
 
@@ -30,22 +35,56 @@ makeRegisters a b c =
       _regC = c
     }
 
-makeLenses ''Registers
+makeComputer :: Registers -> Computer
+makeComputer r = Computer {_registers = r, _pointer = 0, _output = []}
 
-day17TestInput :: String
-day17TestInput =
+makeLenses ''Registers
+makeLenses ''Computer
+
+day17TestInput :: [String]
+day17TestInput = [day17TestInput1, day17TestInput2]
+
+day17TestInput1, day17TestInput2 :: String
+day17TestInput1 =
   "Register A: 729\n\
   \Register B: 0\n\
   \Register C: 0\n\
   \\n\
   \Program: 0,1,5,4,3,0\n\
   \"
+day17TestInput2 =
+  "Register A: 2024\n\
+  \Register B: 0\n\
+  \Register C: 0\n\
+  \\n\
+  \Program: 0,3,5,4,3,0\n\
+  \"
 
 day17 :: AOCSolution
-day17 input = [p1]
+day17 input = [part1, part2] <*> pure (parseInput input)
+
+part1 :: (Registers, Instructions) -> String
+part1 = getOutput . runInstructions
   where
-    i = parseInput input
-    p1 = getOutput $ runInstructions i
+    getOutput :: Computer -> String
+    getOutput comp = intercalate "," $ map show $ reverse $ comp ^. output
+
+part2 :: (Registers, Instructions) -> String
+part2 (_, instructions) = maybe "-" show $ go 0 (pred sz) 0
+  where
+    irl = reverse $ V.toList instructions
+    sz = V.length instructions
+    go :: Int -> Int -> Int -> Maybe Int
+    go b (-1) _ = Just b
+    go b i 8 = Nothing
+    go b i n
+      | take (sz - i) irl == take (sz - i) r = case go a (pred i) 0 of
+          Just v -> Just v
+          Nothing -> go b i $ succ n
+      | otherwise = go b i $ succ n
+      where
+        a = b + n * 8 ^ i
+        r = runInstructions (makeRegisters a 0 0, instructions) ^. output
 
 parseInput :: String -> (Registers, Instructions)
 parseInput = parse do
@@ -68,25 +107,24 @@ combo r = \case
   6 -> r ^. regC
   7 -> undefined
 
-getOutput :: MachineState -> String
-getOutput (_, _, output) = intercalate "," $ map show $ reverse output
-
-runInstructions :: (Registers, V.Vector Int) -> MachineState
-runInstructions (regs, instrs) = until halt (runInstruction instrs) (regs, 0, [])
+runInstructions :: (Registers, V.Vector Int) -> Computer
+runInstructions (regs, instrs) = until halt (runInstruction instrs) init
   where
-    halt (_, p, _) = p >= V.length instrs
+    halt computer = computer ^. pointer >= V.length instrs
+    init = makeComputer regs
 
-runInstruction :: V.Vector Int -> MachineState -> MachineState
-runInstruction instrs (regs, ptr, output) = case i of
-  0 -> (adv regs o, ptr', output)
-  1 -> (bxl regs o, ptr', output)
-  2 -> (bst regs o, ptr', output)
-  3 -> (regs, if regs ^. regA == 0 then ptr' else o, output)
-  4 -> (bxc regs o, ptr', output)
-  5 -> (regs, ptr', out regs o : output)
-  6 -> (bdv regs o, ptr', output)
-  7 -> (cdv regs o, ptr', output)
+runInstruction :: V.Vector Int -> Computer -> Computer
+runInstruction instrs comp = case i of
+  0 -> set pointer ptr' $ set registers (adv (comp ^. registers) o) comp
+  1 -> set pointer ptr' $ set registers (bxl (comp ^. registers) o) comp
+  2 -> set pointer ptr' $ set registers (bst (comp ^. registers) o) comp
+  3 -> set pointer (if comp ^. registers . regA == 0 then ptr' else o) comp
+  4 -> set pointer ptr' $ set registers (bxc (comp ^. registers) o) comp
+  5 -> set pointer ptr' $ set output (out (comp ^. registers) o : comp ^. output) comp
+  6 -> set pointer ptr' $ set registers (bdv (comp ^. registers) o) comp
+  7 -> set pointer ptr' $ set registers (cdv (comp ^. registers) o) comp
   where
+    ptr = comp ^. pointer
     i = instrs V.! ptr
     o = instrs V.! succ ptr
     ptr' = ptr + 2
