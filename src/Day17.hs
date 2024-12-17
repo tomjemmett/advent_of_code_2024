@@ -98,14 +98,10 @@ parseInput = parse do
 
 combo :: Registers -> Int -> Int
 combo r = \case
-  0 -> 0
-  1 -> 1
-  2 -> 2
-  3 -> 3
   4 -> r ^. regA
   5 -> r ^. regB
   6 -> r ^. regC
-  7 -> undefined
+  x -> x
 
 runInstructions :: (Registers, V.Vector Int) -> Computer
 runInstructions (regs, instrs) = until halt (runInstruction instrs) init
@@ -115,33 +111,21 @@ runInstructions (regs, instrs) = until halt (runInstruction instrs) init
 
 runInstruction :: V.Vector Int -> Computer -> Computer
 runInstruction instrs comp = case i of
-  0 -> set pointer ptr' $ set registers (adv (comp ^. registers) o) comp
-  1 -> set pointer ptr' $ set registers (bxl (comp ^. registers) o) comp
-  2 -> set pointer ptr' $ set registers (bst (comp ^. registers) o) comp
+  0 -> rn (\r o -> set regA (r ^. regA `div` 2 ^ combo r o) r)
+  1 -> rn (\r o -> set regB (r ^. regB `xor` o) r)
+  2 -> rn (\r o -> set regB (combo r o `mod` 8) r)
   3 -> set pointer (if comp ^. registers . regA == 0 then ptr' else o) comp
-  4 -> set pointer ptr' $ set registers (bxc (comp ^. registers) o) comp
-  5 -> set pointer ptr' $ set output (out (comp ^. registers) o : comp ^. output) comp
-  6 -> set pointer ptr' $ set registers (bdv (comp ^. registers) o) comp
-  7 -> set pointer ptr' $ set registers (cdv (comp ^. registers) o) comp
+  4 -> rn (\r _ -> set regB (r ^. regB `xor` r ^. regC) r)
+  5 -> set pointer ptr' $ set output (combo (comp ^. registers) o `mod` 8 : comp ^. output) comp
+  6 -> rn (\r o -> set regB (r ^. regA `div` 2 ^ combo r o) r)
+  7 -> rn (\r o -> set regC (r ^. regA `div` 2 ^ combo r o) r)
   where
     ptr = comp ^. pointer
     i = instrs V.! ptr
     o = instrs V.! succ ptr
     ptr' = ptr + 2
-    adv :: Registers -> Int -> Registers
-    adv r o = set regA (r ^. regA `div` 2 ^ combo r o) r
-    bxl :: Registers -> Int -> Registers
-    bxl r o = set regB (r ^. regB `xor` o) r
-    bst :: Registers -> Int -> Registers
-    bst r o = set regB (combo r o `mod` 8) r
-    bxc :: Registers -> p -> Registers
-    bxc r _ = set regB (r ^. regB `xor` r ^. regC) r
-    out :: Registers -> Int -> Int
-    out r o = combo r o `mod` 8
-    bdv :: Registers -> Int -> Registers
-    bdv r o = set regB (r ^. regA `div` 2 ^ combo r o) r
-    cdv :: Registers -> Int -> Registers
-    cdv r o = set regC (r ^. regA `div` 2 ^ combo r o) r
+    rn :: (Registers -> Int -> Registers) -> Computer
+    rn f = set pointer ptr' $ set registers (f (comp ^. registers) o) comp
 
 {-
 Notes: what does our program do?
