@@ -32,6 +32,7 @@ common shared-properties
         pointedlist,
         primes,
         pqueue,
+        search-algorithms,
         split,
         time,
         timeit,
