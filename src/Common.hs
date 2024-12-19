@@ -29,7 +29,7 @@ type Grid2d = V.Vector (V.Vector Int)
 
 type Interval = (Int, Int)
 
-data Direction = North | East | South | West deriving (Show, Enum, Eq)
+data Direction = North | East | South | West deriving (Show, Enum, Eq, Ord)
 
 instance Hashable Direction where
   hashWithSalt salt = hashWithSalt salt . fromEnum

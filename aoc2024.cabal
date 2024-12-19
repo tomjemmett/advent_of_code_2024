@@ -62,7 +62,6 @@ library
     exposed-modules:
         Days
         Common
-        PathFinding
     other-modules:
         Day01
         Day02
