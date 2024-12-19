@@ -5,7 +5,7 @@ import SpecHelper
 spec :: Spec
 spec = describe "Day 19" $ do
   it "Sample" $ do
-    day19 day19TestInput `shouldBe` []
+    day19 day19TestInput `shouldBe` ["6", "16"]
 
   it "Actual" $ do
     withFile
@@ -13,5 +13,5 @@ spec = describe "Day 19" $ do
       ReadMode
       ( \h -> do
           actualInput <- hGetContents h
-          day19 actualInput `shouldBe` []
+          day19 actualInput `shouldBe` ["269", "758839075658876"]
       )
