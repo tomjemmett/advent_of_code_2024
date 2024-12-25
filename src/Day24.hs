@@ -1,5 +1,4 @@
--- module Day24 (day24, day24TestInput) where
-module Day24 where
+module Day24 (day24, day24TestInput) where
 
 import Common
 import Control.Monad.RWS
