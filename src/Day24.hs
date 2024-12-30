@@ -74,11 +74,11 @@ day24 input = [show p1]
     p1 = run w g zs
 
 parseInput :: String -> (Wires, Gates)
-parseInput i = (M.fromList a', M.fromList b')
-  where
-    [a, b] = splitOn "\n\n" i
-    a' = parse (pWire `P.sepBy` P.newline) a
-    b' = parse (pGate `P.sepBy` P.newline) b
+parseInput = parse do
+  a <- pWire `P.sepEndBy` P.newline
+  P.newline
+  b <- pGate `P.sepEndBy` P.newline
+  pure (M.fromList a, M.fromList b)
 
 pWire :: Parser (String, Int)
 pWire = do
