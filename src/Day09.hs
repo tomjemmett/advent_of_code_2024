@@ -11,7 +11,7 @@ day09TestInput :: String
 day09TestInput = "2333133121414131402"
 
 day09 :: AOCSolution
-day09 input = show <$> ([part1, part2] <*> pure input)
+day09 input = show <$> ([part1, part2] <*> pure (takeWhile (/='\n') input))
 
 part1 :: String -> Int
 part1 i = sum $ zipWith (*) [0 ..] $ take (length r) $ fillDisk d r
