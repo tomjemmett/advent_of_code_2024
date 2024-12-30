@@ -32,7 +32,7 @@ day19 = map show . solve . parseInput
 parseInput :: String -> ([String], [String])
 parseInput = parse do
   towels <- P.many1 P.letter `P.sepBy` P.string ", " <* P.newline
-  patterns <- P.newline *> P.many1 P.letter `P.sepBy` P.newline
+  patterns <- P.newline *> P.many1 P.letter `P.sepEndBy` P.newline
   pure (towels, patterns)
 
 solve :: ([String], [String]) -> [Int]
