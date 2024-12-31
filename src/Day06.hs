@@ -1,11 +1,17 @@
 module Day06 (day06, day06TestInput) where
 
 import Common
+import Control.Monad.RWS.Strict
 import Control.Parallel.Strategies (parMap, rseq)
+import Data.Array qualified as A
 import Data.HashMap.Strict qualified as M
 import Data.HashSet qualified as S
-import Data.List (partition)
-import Data.Maybe (fromMaybe, isNothing)
+
+type Grid = A.Array Point2d Bool
+
+type Points = [M.HashMap Point2d Direction]
+
+type Visited = S.HashSet (Point2d, Direction)
 
 day06TestInput :: String
 day06TestInput =
@@ -22,37 +28,60 @@ day06TestInput =
   \"
 
 day06 :: AOCSolution
-day06 input = show <$> ([part1, part2] <*> pure (parseInput input))
-
-part1 :: (M.HashMap Point2d Char, Point2d) -> Int
-part1 = length . fromMaybe [] . move S.empty North
-
-part2 :: (M.HashMap Point2d Char, Point2d) -> Int
-part2 (grid, start) = countTrue isNothing checkGrids
+day06 input = show <$> [p1, p2]
   where
-    Just positionsToCheck = move S.empty North (grid, start)
-    checkGrids = parMap rseq run positionsToCheck
-    run k = move S.empty North (M.insert k '#' grid, start)
+    (g, s) = parseInput input
+    (a, b) = part1 g s
+    p1 = S.size $ S.map fst a
+    p2 = sum $ parMap rseq (part2 g) (M.toList $ M.unions b)
 
-move :: S.HashSet (Point2d, Direction) -> Direction -> (M.HashMap Point2d Char, Point2d) -> Maybe [Point2d]
-move visited dir (grid, pos)
-  | S.member (pos, dir) visited = Nothing
-  | otherwise = case M.lookup pos' grid of
-      Just '#' -> move visited' (turn90 dir) (grid', pos)
-      Just _ -> move visited' dir (grid', pos')
-      Nothing -> Just $ M.keys $ M.filter (== 'X') grid'
+part1 :: Grid -> Point2d -> (Visited, Points)
+part1 g s = execRWS (go (s, North)) g S.empty
   where
-    pos' = moveOneStepInDir pos dir
-    grid' = M.insert pos 'X' grid
-    visited' = S.insert (pos, dir) visited
+    go (p, d) = do
+      tell [M.singleton p d]
+      solve go (p, d)
 
-parseInput :: String -> (M.HashMap Point2d Char, Point2d)
-parseInput input = (M.insert start '^' $ M.fromList vs, start)
+part2 :: Grid -> (Point2d, Direction) -> Int
+part2 g (p, d) = fst $ evalRWS (go (p', d')) g' S.empty
   where
-    ((fst -> start) : _, vs) =
-      partition
-        ((== '^') . snd)
-        [ ((i, j), v)
-          | (i, line) <- zip [0 ..] $ lines input,
-            (j, v) <- zip [0 ..] line
-        ]
+    g' = g A.// [(p, False)]
+    d' = turn90 d
+    p' = moveOneStepInDir p $ turn90 d'
+    go = solve go
+
+solve ::
+  ((Point2d, Direction) -> RWS Grid Points Visited Int) ->
+  (Point2d, Direction) ->
+  RWS Grid Points Visited Int
+solve go (p, d) = do
+  v <- get
+  if (p, d) `S.member` v
+    then pure 1
+    else do
+      modify $ S.insert (p, d)
+      g <- ask
+      let p' = moveOneStepInDir p d
+          d' = turn90 d
+      case g !?! p' of
+        Just True -> go (p', d)
+        Just False -> go (p, d')
+        Nothing -> pure 0
+
+(!?!) :: (A.Ix i) => A.Array i e -> i -> Maybe e
+(!?!) g p =
+  if A.inRange (A.bounds g) p
+    then Just $ g A.! p
+    else Nothing
+
+parseInput :: String -> (Grid, Point2d)
+parseInput input = (fmap (/= '#') g, start)
+  where
+    xs =
+      [ ((i, j), v)
+        | (i, line) <- zip [0 ..] $ lines input,
+          (j, v) <- zip [0 ..] line
+      ]
+    mxy = maximum $ map fst xs
+    g = A.array ((0, 0), mxy) xs
+    start = fst $ head $ filter ((== '^') . snd) xs
