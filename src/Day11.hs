@@ -24,9 +24,9 @@ blink = M.foldrWithKey' f mempty
 rule :: Int -> [Int]
 rule stone
   | stone == 0 = [1]
-  | even stoneLen = map read $ untuplify2 $ splitAt n stoneStr
+  | even pow = [a, b]
   | otherwise = [stone * 2024]
   where
-    stoneStr = show stone
-    stoneLen = length stoneStr
-    n = stoneLen `div` 2
+    pow = length . takeWhile (<= stone) $ iterate (*10) 1
+    (a, b) = stone `divMod` (10 ^ (pow `div` 2))
+     
