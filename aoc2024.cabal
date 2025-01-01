@@ -49,6 +49,7 @@ common shared-properties
         FlexibleInstances
         ImportQualifiedPost
         LambdaCase
+        MonadComprehensions
         MultiWayIf
         RecordWildCards
         TupleSections
