@@ -2,13 +2,13 @@ module Day20 (day20, day20TestInput) where
 
 import Common
 import Control.Monad.RWS.Strict
-import Data.Function (on)
+import Control.Parallel.Strategies
 import Data.HashMap.Strict qualified as M
 import Data.HashSet qualified as S
 import Data.Hashable (Hashable)
-import Data.List (find, sortBy)
+import Data.List (find)
+import Data.Sequence (Seq ((:<|)), (><))
 import Data.Sequence qualified as SQ
-import Data.Sequence ((><), Seq((:<|)))
 
 type Grid = M.HashMap Point2d Bool
 
@@ -36,12 +36,11 @@ day20TestInput =
   \"
 
 day20 :: AOCSolution
-day20 input = show . solve <$> [(== 2), (< 21)]
+day20 input = show <$> [p1, sum cheats]
   where
     (g, s) = parseInput input
-    distances = floodFill g s
-    ds = sortBy (compare `on` snd) $ M.toList distances
-    solve f = combinations (validCheat f) ds
+    !distances = floodFill g s
+    cheats@(p1 : _) = parMap rseq (findCheats distances) [2 .. 20]
 
 parseInput :: String -> (Grid, Point2d)
 parseInput input = (M.map (/= '#') $ M.fromList i, s)
@@ -51,6 +50,23 @@ parseInput input = (M.map (/= '#') $ M.fromList i, s)
       (x, v) <- zip [0 ..] line
       pure ((y, x), v)
     Just s = fst <$> find ((== 'S') . snd) i
+
+withinDistance :: Int -> Point2d -> [Point2d]
+withinDistance n (x, y) =
+  concat
+    [ [ (x + i, y - (n - i))
+        | i <- [0 .. (n - 1)]
+      ],
+      [ (x + i, y + (n - i))
+        | i <- [n, (n - 1) .. 1]
+      ],
+      [ (x - i, y + (n - i))
+        | i <- [0 .. (n - 1)]
+      ],
+      [ (x - i, y - (n - i))
+        | i <- [n, (n - 1) .. 1]
+      ]
+    ]
 
 floodFill :: Grid -> Point2d -> M.HashMap Point2d Int
 floodFill g s = M.insert s 0 $ snd $ execRWS (go $ SQ.singleton (s, 1)) g (S.singleton s)
@@ -69,11 +85,13 @@ floodFill g s = M.insert s 0 $ snd $ execRWS (go $ SQ.singleton (s, 1)) g (S.sin
 notMember :: (Hashable a) => S.HashSet a -> a -> Bool
 notMember s = not . (`S.member` s)
 
-validCheat :: (Int -> Bool) -> ((Point2d, Int), (Point2d, Int)) -> Bool
-validCheat f ((ip, id), (jp, jd)) = f d && (jd - id - d) >= 100
+findCheats :: M.HashMap Point2d Int -> Int -> Int
+findCheats distances d = foldr go 0 $ M.toList distances
   where
-    d = manhattanDistance ip jp
-
-combinations :: ((a, a) -> Bool) -> [a] -> Int
-combinations _ xs | length xs < 2 = 0
-combinations f (x:xs) = countTrue (f . (x,)) xs + combinations f xs
+    go :: (Point2d, Int) -> Int -> Int
+    go (ip, id) acc = acc + (countTrue validCheat $ withinDistance d ip)
+      where
+        validCheat :: Point2d -> Bool
+        validCheat jp = case distances M.!? jp of
+          Just jd -> (jd - id - d) >= 100
+          Nothing -> False
