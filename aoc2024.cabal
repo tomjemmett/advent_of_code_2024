@@ -23,6 +23,7 @@ common shared-properties
         bytestring,
         containers,
         directory,
+        dotenv,
         fgl,
         hashable,
         lens,
@@ -61,8 +62,8 @@ common shared-properties
 library
     import:           shared-properties
     exposed-modules:
+        Common,
         Days
-        Common
     other-modules:
         Day01
         Day02
@@ -95,7 +96,10 @@ executable aoc2024
     import:           shared-properties
     main-is:          Main.hs
     build-depends:
-        aoc2024
+        aoc2024,
+        http-client,
+        http-client-tls,
+        http-types
     hs-source-dirs:   app
     ghc-options: -threaded -rtsopts
 
