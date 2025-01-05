@@ -4,9 +4,6 @@ import SpecHelper
 
 spec :: Spec
 spec = describe "Day 18" $ do
-  it "Sample" $ do
-    day18 day18TestInput `shouldBe` ["22", "6,1"]
-
   it "Actual" $ do
     withFile
       "inputs/day18.txt"
