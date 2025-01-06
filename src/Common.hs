@@ -48,6 +48,20 @@ turn90 = \case
   South -> West
   West -> North
 
+turn180 :: Direction -> Direction
+turn180 = \case
+  North -> South
+  East -> West
+  South -> North
+  West -> East
+
+turn270 :: Direction -> Direction
+turn270 = \case
+  North -> West
+  East -> North
+  South -> East
+  West -> South
+
 addTuples :: (Int, Int) -> (Int, Int) -> (Int, Int)
 addTuples (a, b) (c, d) = (a + c, b + d)
 
