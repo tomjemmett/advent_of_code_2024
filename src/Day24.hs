@@ -4,16 +4,14 @@ import Common
 import Control.Monad.RWS
 import Data.Bits (xor, (.&.), (.|.))
 import Data.HashMap.Strict qualified as M
-import Data.List (sort)
+import Data.List (intercalate, sort)
 import Data.List.Split (splitOn)
 import Text.Parsec qualified as P
 import Text.Parsec.String (Parser)
 
 type Wires = M.HashMap String Int
 
-type Gates = M.HashMap String (GateOp, String, String)
-
-type GateOp = Int -> Int -> Int
+type Gates = M.HashMap String (String, String, String)
 
 day24TestInput :: String
 day24TestInput =
@@ -67,11 +65,13 @@ day24TestInput =
   \"
 
 day24 :: AOCSolution
-day24 input = [show p1]
+day24 input = [show p1, p2]
   where
     (w, g) = parseInput input
     zs = sort $ filter ((== 'z') . head) $ M.keys g
     p1 = run w g zs
+    lastZ = maximum zs
+    p2 = intercalate "," $ sort $ findIncorrect lastZ (M.elems g) (M.toList g)
 
 parseInput :: String -> (Wires, Gates)
 parseInput = parse do
@@ -86,20 +86,14 @@ pWire = do
   v <- read <$> P.many1 P.digit
   pure (n, v)
 
-pGate :: Parser (String, (GateOp, String, String))
+pGate :: Parser (String, (String, String, String))
 pGate = do
   a <- pName <* P.space
   o <- P.choice $ P.try . P.string <$> ["AND", "XOR", "OR"]
   P.space
   b <- pName <* P.string " -> "
   c <- pName
-  pure (c, (getOp o, a, b))
-  where
-    getOp :: String -> (Int -> Int -> Int)
-    getOp = \case
-      "AND" -> (.&.)
-      "OR" -> (.|.)
-      "XOR" -> xor
+  pure (c, (o, a, b))
 
 pName :: Parser String
 pName = P.many1 P.alphaNum
@@ -114,12 +108,30 @@ evalInstruction x = do
       let (o, a, b) = ops M.! x
       a' <- evalInstruction a
       b' <- evalInstruction b
-      let r = o a' b'
+      let r = getOp o a' b'
       modify $ M.insert x r
       pure r
+  where
+    getOp :: String -> (Int -> Int -> Int)
+    getOp = \case
+      "AND" -> (.&.)
+      "OR" -> (.|.)
+      "XOR" -> xor
 
 run :: Wires -> Gates -> [String] -> Int
 run w g xs = binaryToDecimal $ reverse $ fst $ evalRWS (traverse evalInstruction xs) g w
 
 binaryToDecimal :: [Int] -> Int
 binaryToDecimal = foldl (\acc bit -> acc * 2 + bit) 0
+
+findIncorrect :: String -> [(String, String, String)] -> [(String, (String, String, String))] -> [String]
+findIncorrect _ _ [] = []
+findIncorrect lastZ g ((k@(k' : _), (o, a@(a' : _), b@(b' : _))) : gs)
+  | k' == 'z' && o /= "XOR" && k /= lastZ = k : findIncorrect lastZ g gs
+  | o == "XOR" && all (`notElem` "xyz") [k', a', b'] = k : findIncorrect lastZ g gs
+  | o == "XOR" && any (f1 k) g = k : findIncorrect lastZ g gs
+  | o == "AND" && "x00" `notElem` [a, b] && any (f2 k) g = k : findIncorrect lastZ g gs
+  | otherwise = findIncorrect lastZ g gs
+  where
+    f1 k (o', a', b') = o' == "OR" && k `elem` [a', b']
+    f2 k (o', a', b') = o' /= "OR" && k `elem` [a', b']
