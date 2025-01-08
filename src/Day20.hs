@@ -89,7 +89,7 @@ findCheats :: M.HashMap Point2d Int -> Int -> Int
 findCheats distances d = foldr go 0 $ M.toList distances
   where
     go :: (Point2d, Int) -> Int -> Int
-    go (ip, id) acc = acc + (countTrue validCheat $ withinDistance d ip)
+    go (ip, id) acc = acc + countTrue validCheat (withinDistance d ip)
       where
         validCheat :: Point2d -> Bool
         validCheat jp = case distances M.!? jp of

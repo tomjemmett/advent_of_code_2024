@@ -16,7 +16,7 @@ main = do
   args <- getArgs
   if null args
     then mapM_ runDay [1 .. 25]
-    else runDay (read $ args !! 0)
+    else runDay (read $ head args)
 
 downloadInput :: Int -> IO ()
 downloadInput day = do
